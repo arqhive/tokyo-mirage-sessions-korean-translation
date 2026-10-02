@@ -1,0 +1,68 @@
+# ─────────────────────────────────────────────────────────────
+# 환영이문록♯FE 한글화 — 추적 기준
+#   추적: 도구(tools), 번역 원본(work/text, translation), 자막 정렬,
+#         확정 그래픽 목록(translation/graphics/manifest.json)
+#   제외: 게임 데이터, 게임 그림이 든 모든 이미지·텍스처, 빌드 산출물,
+#         파이썬 환경·모델, 날짜 붙은 백업(이력은 git 이 대신함)
+# ─────────────────────────────────────────────────────────────
+
+# 게임 데이터 (저작권 — 커밋하지 않음)
+/Tokyo Mirage Sessions FE */
+*.cpk
+*.usm
+*.rpx
+*.rpl
+*.app
+*.tmd
+*.tik
+*.h3
+*.cert
+
+# work/ 는 번역 원본(text)과 자막 작업 파일만 추적
+/work/*
+!/work/text/
+!/work/movie_sub/
+/work/movie_sub/*
+!/work/movie_sub/*.ko.srt
+!/work/movie_sub/*.align.tsv
+
+# 폰트 (라이선스와 함께 따로 받음)
+/fonts/
+*.ttf
+*.otf
+*.ttc
+
+# 게임 그림이 든 이미지·텍스처·모델 (원본·작업본·비교 모두)
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.bmp
+*.tga
+*.dds
+*.psd
+*.gtx
+*.bfres
+*.apak
+*.bffnt
+*.bin
+*.npy
+
+# 영상·음성·압축
+*.mp4
+*.wav
+*.zip
+*.7z
+
+# 날짜 붙은 백업 스냅샷 (git 이력으로 대신)
+/translation/backup_*/
+/translation/review_2026*/
+/translation/*.2026-??-??.*
+/translation/review_applied_*.html
+
+# 파이썬·로그
+__pycache__/
+*.pyc
+*.log
+*.tmp

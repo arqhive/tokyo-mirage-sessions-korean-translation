@@ -1,0 +1,6 @@
+[Definition]
+titleIds = 0005000010131D00
+name = Korean Translation
+path = "Tokyo Mirage Sessions FE/Mods/Korean Translation"
+description = 환영이문록♯FE 한글 패치
+version = 7
