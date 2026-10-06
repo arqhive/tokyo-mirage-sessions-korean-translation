@@ -29,12 +29,12 @@
 
 | 파일 | 필수 | 내용 |
 |---|---|---|
-| `TMS_KO_v0.1_Patcher.zip` | ○ | 패처. 대사·폰트·그림·이펙트·타이틀 로고 영상 |
+| `ASEJ_KPatch_v0.1.zip` | ○ | 패처. 대사·폰트·그림·이펙트·타이틀 로고 영상 |
 | `TMS_KO_v0.1_Movies.zip` | 선택 | 이벤트 동영상 21편의 한글 자막(약 3.4GB). 용량이 커서 [구글 드라이브](https://drive.google.com/file/d/16qqc3NX-3AZecIR2Mo_DmEXbTtlPON5z/view?usp=drive_link)에서 받습니다. |
 
 ### 적용 방법
 
-1. [배포 페이지](../../releases/latest)에서 `TMS_KO_v0.1_Patcher.zip`을 받아 압축을 풉니다.
+1. [배포 페이지](../../releases/latest)에서 `ASEJ_KPatch_v0.1.zip`을 받아 압축을 풉니다.
 2. 동영상 자막도 넣으려면 [구글 드라이브](https://drive.google.com/file/d/16qqc3NX-3AZecIR2Mo_DmEXbTtlPON5z/view?usp=drive_link)에서 `TMS_KO_v0.1_Movies.zip`을 받아 같은 곳에 압축을 풉니다(`TMS_KO_v0.1\patcher\payload_movies` 폴더가 생깁니다).
 3. 게임 폴더(또는 `content\Pack` 폴더)를 `패치하기.bat` 위에 끌어다 놓습니다. 그냥 실행하면 경로를 물어봅니다.
 4. 원본 확인 → 한글판 만들기 → 결과 확인이 끝날 때까지 기다립니다(몇 분 정도). 원본 파일은 바뀌지 않습니다.
