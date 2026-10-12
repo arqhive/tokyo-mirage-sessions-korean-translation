@@ -7,9 +7,11 @@
 결과(원본 파일은 바뀌지 않는다):
   출력/sdcafiine/0005000010131D00/KoreanTranslation/content/Pack/*.cpk   Wii U 실기(SDCafiine)용
   출력/cemu/TMS_Korean/                                                  Cemu 그래픽팩용(같은 파일을 하드 링크로)
-자막 영상 패치(TMS_KO_*_Movies.zip)를 이 폴더에 풀어 두면 동영상 자막도 함께 넣는다.
+자막 영상 패치(Movies zip)를 패처 zip 과 같은 곳에 풀어 두면 동영상 자막도 함께 넣는다.
+자막 영상 묶음은 버전이 아니라 조각 목록 내용(id)으로 확인한다 — 자막 영상이 그대로면 예전 버전 Movies zip 도 쓸 수 있다.
+예전 Movies zip 은 자기 버전 이름의 폴더(예: TMS_KO_v0.1/patcher/payload_movies)로 풀리므로, 이 패처 폴더 옆 폴더들도 찾아본다.
 """
-import os, sys, json, time, hashlib, shutil, traceback
+import os, sys, json, glob, time, hashlib, shutil, traceback
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 TOP = os.path.dirname(HERE)
@@ -65,18 +67,39 @@ def link_or_copy(src, dst):
         shutil.copyfile(src, dst)
 
 
+def find_movies(man):
+    """자막 영상 폴더 찾기: 이 패처 안 → 이 패처 폴더 옆 폴더들의 patcher/payload_movies. (폴더, 상태) 를 돌려준다."""
+    cands = [os.path.join(HERE, 'payload_movies')]
+    cands += sorted(glob.glob(os.path.join(glob.escape(os.path.dirname(TOP)), '*', 'patcher', 'payload_movies')))
+    uniq = {os.path.normcase(os.path.abspath(c)): os.path.abspath(c) for c in reversed(cands)}  # 같은 폴더는 한 번만(표시는 원래 대소문자)
+    found = [c for c in (uniq[k] for k in dict.fromkeys(os.path.normcase(os.path.abspath(c)) for c in cands))
+             if os.path.isfile(os.path.join(c, 'manifest.json'))]
+    need = man['movies']['parts']
+    for c in found:
+        if all(os.path.isfile(os.path.join(c, p + x)) for p in need for x in ('.bin', '.json')) and movies_id(c, need) == man['movies']['id']:
+            return c, 'ok'
+    return (found[0], 'bad') if found else (None, 'none')
+
+
+def movies_id(root, parts):
+    """자막 영상 묶음 id = 조각 목록 파일 내용의 SHA-1(tools/make_patcher.py 와 같은 계산). 버전과 상관없이 내용이 같으면 같은 id."""
+    h = hashlib.sha1()
+    for p in parts:
+        h.update(json.dumps(json.load(open(os.path.join(root, p + '.json'), encoding='utf-8')), sort_keys=True).encode())
+    return h.hexdigest()
+
+
 def main():
     man = json.load(open(os.path.join(PAYLOAD, 'manifest.json'), encoding='utf-8'))
-    movies = os.path.isfile(os.path.join(MOVIES, 'manifest.json'))
+    global MOVIES
     print('환영이문록♯FE 한글 패치 %s\n' % man['version'])
+    MOVIES, st = find_movies(man)
+    movies = st == 'ok'
+    if st == 'bad':
+        print('[오류] 자막 영상 패치(%s)가 이 패처와 맞지 않거나 일부가 없습니다.\n'
+              '       릴리즈 안내에 적힌 Movies 압축 파일을 패처와 같은 곳에 다시 풀어 주세요.' % MOVIES); return 1
     if movies:
-        mv = json.load(open(os.path.join(MOVIES, 'manifest.json'), encoding='utf-8'))
-        miss = [p for p in mv['parts'] if not os.path.isfile(os.path.join(MOVIES, p + '.bin'))]
-        if mv['version'] != man['version']:
-            print('[오류] 자막 영상 패치 버전(%s)이 패처 버전(%s)과 다릅니다.' % (mv['version'], man['version'])); return 1
-        if miss:
-            print('[오류] 자막 영상 패치 일부가 없습니다: %s\n       Movies 압축 파일을 이 폴더에 다시 풀어 주세요.' % ', '.join(miss)); return 1
-        print('자막 영상 패치: 있음 — 동영상 자막도 넣습니다.')
+        print('자막 영상 패치: 있음 — 동영상 자막도 넣습니다.\n  (%s)' % MOVIES)
     else:
         print('자막 영상 패치: 없음 — 대사·폰트·그림·타이틀 로고 영상만 넣습니다.')
     arg = sys.argv[1] if len(sys.argv) > 1 and sys.argv[1].strip() else None
@@ -89,7 +112,7 @@ def main():
     print('원본 폴더: %s\n' % src)
     plan = dict(man['packs'])
     if movies:
-        plan.update(mv['packs'])
+        plan.update(man['movies']['packs'])
     # 1) 원본 확인
     print('[1/3] 원본 확인')
     for pack in sorted(plan):

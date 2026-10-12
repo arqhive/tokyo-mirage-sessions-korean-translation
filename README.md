@@ -3,13 +3,13 @@
 「幻影異聞録♯FE」(Wii U, 일본판 `0005000010131D00`) 비공식 한국어 팬 패치입니다.
 대사는 일본어판 원문을 기준으로 번역했습니다.
 
-**제작: arqhive** · **최신 버전: [v0.1](../../releases/tag/v0.1)**
+**제작: arqhive** · **최신 버전: [v0.2](../../releases/tag/v0.2)**
 
 - 대사 전체를 한글화했습니다(이벤트·필드·사이드 스토리·TOPIC·메뉴·아이템·스킬 등 28,399개 메시지).
 - 게임 폰트 10종에 한글을 새로 그려 넣었습니다.
 - 글씨가 그려진 그림 259장(UI·공지·포스터·배경 광고 등)과 이펙트 그림 26장(필드 상호작용 표시·전투 돌입 배너 등)을 한글화했습니다.
 - 이벤트 동영상 21편에 한글 자막을 넣었습니다(선택 패치).
-- 타이틀 로고 영상과 타이틀 화면 로고를 한글 로고로 바꿨습니다.
+- 타이틀 로고 영상(조립 장면 포함)과 타이틀 화면 로고를 한글 로고로 바꿨습니다.
 - **가지고 있는 일본판 게임 파일로 한글판을 만드는 패처로 배포합니다.** 결과는 Wii U 실기(SDCafiine)와 Cemu 에서 바로 쓸 수 있습니다.
 
 > 이 저장소에는 롬·그래픽·영상 같은 게임 데이터가 들어 있지 않습니다.
@@ -29,16 +29,16 @@
 
 | 파일 | 필수 | 내용 |
 |---|---|---|
-| `ASEJ_KPatch_v0.1.zip` | ○ | 패처. 대사·폰트·그림·이펙트·타이틀 로고 영상 |
-| `TMS_KO_v0.1_Movies.zip` | 선택 | 이벤트 동영상 21편의 한글 자막(약 3.4GB). 용량이 커서 [구글 드라이브](https://drive.google.com/file/d/16qqc3NX-3AZecIR2Mo_DmEXbTtlPON5z/view?usp=drive_link)에서 받습니다. |
+| `ASEJ_KPatch_v0.2.zip` | ○ | 패처. 대사·폰트·그림·이펙트·타이틀 로고 영상 |
+| `TMS_KO_v0.1_Movies.zip` | 선택 | 이벤트 동영상 21편의 한글 자막(약 3.4GB). 용량이 커서 [구글 드라이브](https://drive.google.com/file/d/16qqc3NX-3AZecIR2Mo_DmEXbTtlPON5z/view?usp=drive_link)에서 받습니다. v0.1부터 같은 파일입니다. |
 
 ### 적용 방법
 
-1. [배포 페이지](../../releases/latest)에서 `ASEJ_KPatch_v0.1.zip`을 받아 압축을 풉니다.
-2. 동영상 자막도 넣으려면 [구글 드라이브](https://drive.google.com/file/d/16qqc3NX-3AZecIR2Mo_DmEXbTtlPON5z/view?usp=drive_link)에서 `TMS_KO_v0.1_Movies.zip`을 받아 같은 곳에 압축을 풉니다(`TMS_KO_v0.1\patcher\payload_movies` 폴더가 생깁니다).
+1. [배포 페이지](../../releases/latest)에서 `ASEJ_KPatch_v0.2.zip`을 받아 압축을 풉니다.
+2. 동영상 자막도 넣으려면 [구글 드라이브](https://drive.google.com/file/d/16qqc3NX-3AZecIR2Mo_DmEXbTtlPON5z/view?usp=drive_link)에서 `TMS_KO_v0.1_Movies.zip`을 받아 같은 곳에 압축을 풉니다(패처 폴더 옆에 `TMS_KO_v0.1\patcher\payload_movies` 폴더가 생기면 됩니다. 패처가 옆 폴더에서 찾습니다).
 3. 게임 폴더(또는 `content\Pack` 폴더)를 `패치하기.bat` 위에 끌어다 놓습니다. 그냥 실행하면 경로를 물어봅니다.
 4. 원본 확인 → 한글판 만들기 → 결과 확인이 끝날 때까지 기다립니다(몇 분 정도). 원본 파일은 바뀌지 않습니다.
-5. `TMS_KO_v0.1\출력` 폴더에 결과가 생깁니다.
+5. `ASEJ_KPatch_v0.2\출력` 폴더에 결과가 생깁니다.
 
 #### Wii U 실기 (SDCafiine)
 
@@ -60,7 +60,7 @@ sd:/wiiu/sdcafiine/0005000010131D00/KoreanTranslation/content/Pack/*.cpk
 |---|---|
 | pack_031_message.cpk 가 있는 폴더를 찾지 못했습니다 | 게임 폴더나 `content\Pack` 폴더를 넣어 주세요. 암호화된 상태(.app)로는 안 됩니다. |
 | …cpk 가 일본판 원본과 다릅니다 | 이미 패치한 파일이거나 다른 판입니다. 원본 일본판 파일을 넣으세요. |
-| 자막 영상 패치 일부가 없습니다 | `TMS_KO_v0.1_Movies.zip`을 패처와 같은 곳에 다시 풀어 주세요. |
+| 자막 영상 패치(…)가 이 패처와 맞지 않거나 일부가 없습니다 | `TMS_KO_v0.1_Movies.zip`을 패처와 같은 곳에 다시 풀어 주세요. |
 | 결과가 기준과 다릅니다 | 패치 파일이 손상됐을 수 있습니다. zip 을 다시 받아 주세요. |
 
 패처는 원본 CPK의 해시를 확인한 뒤 바뀐 파일만 바꿔 CPK를 다시 만들고, 결과가 제작 환경에서 확인한 빌드와 해시까지 같은지 검사합니다.
@@ -72,7 +72,6 @@ sd:/wiiu/sdcafiine/0005000010131D00/KoreanTranslation/content/Pack/*.cpk
 
 ### 알려진 문제
 
-- 타이틀 로고 영상의 조립 장면(시작 후 약 1.3~3.1초)에는 일본어 로고가 잠깐 보입니다. 영상을 끝까지 두거나 넘기면 한글 로고가 나옵니다.
 - 3D 모델에 그려진 글자(간판·소품 등)는 일본어 그대로입니다. 바꿔 넣으면 실기에서 게임이 멈춰서 넣지 않았습니다.
 - 프롤로그 영상 속 신문 제목은 영상의 일부라 일본어 그대로입니다.
 
@@ -92,7 +91,7 @@ sd:/wiiu/sdcafiine/0005000010131D00/KoreanTranslation/content/Pack/*.cpk
 ```bash
 python -X utf8 tools/build.py              # 대사·폰트·2D·이펙트 → CPK 4개
 python -X utf8 tools/build.py --movies     # + 동영상 CPK 2개
-python -X utf8 tools/make_patcher.py v0.1  # 배포용 패처 zip (work/release/)
+python -X utf8 tools/make_patcher.py v0.2  # 배포용 패처 zip (work/release/, 자막 영상이 바뀌었으면 --movies-zip)
 ```
 
 산출물은 `work/sdcafiine/0005000010131D00/TMS_KR/content/Pack/`에 생깁니다. 같은 입력이면 결과는 바이트 단위로 같습니다.

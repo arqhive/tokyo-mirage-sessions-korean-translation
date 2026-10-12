@@ -2,11 +2,12 @@
 """배포용 패처 꾸리기 — 빌드된 CPK 와 원본을 파일 단위로 비교해 바뀐 파일만 담는다(2026-10-01).
 
   python -X utf8 tools/build.py --movies          # 먼저 전체 빌드(대사·폰트·2D·이펙트·영상)
-  python -X utf8 tools/make_patcher.py v0.1 [--python <내장 파이썬 폴더>]
+  python -X utf8 tools/make_patcher.py v0.2 [--python <내장 파이썬 폴더>] [--movies-zip]
 
-출력: work/release/TMS_KO_<버전>/                      패처 폴더(패치하기.bat · python · patcher · licenses · README_KO.txt)
-      work/release/TMS_KO_<버전>_Patcher.zip           필수: 대사·폰트·2D·이펙트·타이틀 로고 영상
-      work/release/TMS_KO_<버전>_Movies.zip             선택: 동영상 자막(약 3.4GB, 구글 드라이브 배포, 같은 패처 폴더에 풀면 됨)
+출력: work/release/ASEJ_KPatch_<버전>/                 패처 폴더(패치하기.bat · python · patcher · licenses · README_KO.txt)
+      work/release/ASEJ_KPatch_<버전>.zip              필수: 대사·폰트·2D·이펙트·타이틀 로고 영상 (릴리즈 이름 규칙 [게임 코드]_KPatch_[버전], 10/13)
+      work/release/ASEJ_KPatch_<버전>_Movies.zip       선택: 동영상 자막(약 3.4GB, 구글 드라이브 배포) — --movies-zip 일 때만.
+        자막 영상이 바뀌지 않았으면 만들지 않는다: 패처가 버전 대신 묶음 id 로 확인하므로 예전 Movies zip(v0.1)을 그대로 쓴다.
 패치 데이터(payload) = 바뀐 파일의 CPK 저장 형태 그대로(압축본은 압축된 채) + 풀린 크기. 원본 게임 데이터는 담지 않는다.
 패처는 원본 CPK 해시를 확인하고 cpk_pack.repack 으로 다시 만든 뒤 결과 해시를 빌드본과 대조한다.
 pack_050_movie 는 두 가지 결과가 있다: 타이틀 로고 영상만 바꾼 것(필수) / 자막 영상까지 바꾼 것(Movies 가 있을 때).
@@ -54,6 +55,14 @@ def write_part(root, part, rep):
     return off
 
 
+def movies_id(root, parts):
+    """자막 영상 묶음 id = 조각 목록 파일(<조각>.json: 파일 이름·위치·크기) 내용의 SHA-1. patcher/patch.py 와 같은 계산."""
+    h = hashlib.sha1()
+    for p in parts:
+        h.update(json.dumps(json.load(open(os.path.join(root, p + '.json'), encoding='utf-8')), sort_keys=True).encode())
+    return h.hexdigest()
+
+
 def src_info(pack):
     p = extract.pack_path(pack)
     return dict(src_size=os.path.getsize(p), src_sha1=sha1_file(p))
@@ -75,7 +84,7 @@ def main():
     ver = sys.argv[1]
     py = sys.argv[sys.argv.index('--python') + 1] if '--python' in sys.argv else PY_DEFAULT
     assert os.path.isfile(os.path.join(py, 'python.exe')), '내장 파이썬이 없음: %s' % py
-    name = 'TMS_KO_%s' % ver
+    name = 'ASEJ_KPatch_%s' % ver
     top = os.path.join(REL, name)
     if os.path.exists(top):
         shutil.rmtree(top)
@@ -99,7 +108,6 @@ def main():
     man['packs']['pack_050_movie'] = dict(s50, parts=['core_050'], out_sha1=sha1_file(tmp), out_size=os.path.getsize(tmp))
     os.remove(tmp)
     print('pack_050_movie(타이틀) 바뀐 파일 1 · %.1fMB' % (len(title[TITLE][0]) / 1e6))
-    json.dump(man, open(os.path.join(pay, 'manifest.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
     # 자막 영상: 크기로 나눠 2GB 미만 조각
     items = sorted(m50.items(), key=lambda kv: kv[0])
     parts, cur, cur_size = [], {}, 0
@@ -109,17 +117,20 @@ def main():
         cur[k] = v; cur_size += len(v[0])
     if cur:
         parts.append(cur)
-    mv = dict(version=ver, packs={}, parts=[])
     names50 = []
     for i, p in enumerate(parts, 1):
         nm = 'movies_050_%d' % i; write_part(mov, nm, p); names50.append(nm)
     write_part(mov, 'movies_060', m60)
-    mv['parts'] = names50 + ['movies_060']
-    mv['packs']['pack_050_movie'] = dict(s50, parts=['core_050'] + names50, out_sha1=sha1_file(os.path.join(BUILT, 'pack_050_movie.cpk')))
-    mv['packs']['pack_060_movie_credit'] = dict(src_info('pack_060_movie_credit'), parts=['movies_060'],
-                                                out_sha1=sha1_file(os.path.join(BUILT, 'pack_060_movie_credit.cpk')))
-    json.dump(mv, open(os.path.join(mov, 'manifest.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
-    print('자막 영상: pack_050 %d개(%d조각) · pack_060 %d개' % (len(m50), len(parts), len(m60)))
+    # 자막 영상 묶음은 버전과 상관없이 「조각 목록 파일 내용」으로 알아본다(2026-10-13).
+    # 결과 해시·어떤 조각을 어디에 쓰는지는 필수 패처 manifest 가 갖는다 → 자막 영상이 그대로면 예전 Movies zip 을 그대로 쓸 수 있다.
+    mparts = names50 + ['movies_060']
+    man['movies'] = dict(id=movies_id(mov, mparts), parts=mparts, packs={
+        'pack_050_movie': dict(s50, parts=['core_050'] + names50, out_sha1=sha1_file(os.path.join(BUILT, 'pack_050_movie.cpk'))),
+        'pack_060_movie_credit': dict(src_info('pack_060_movie_credit'), parts=['movies_060'],
+                                      out_sha1=sha1_file(os.path.join(BUILT, 'pack_060_movie_credit.cpk')))})
+    json.dump(dict(id=man['movies']['id'], parts=mparts), open(os.path.join(mov, 'manifest.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+    json.dump(man, open(os.path.join(pay, 'manifest.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+    print('자막 영상: pack_050 %d개(%d조각) · pack_060 %d개 · 묶음 id %s' % (len(m50), len(parts), len(m60), man['movies']['id'][:12]))
     # 패처 본체·내장 파이썬·라이선스·안내
     lib = os.path.join(pdir, 'lib'); os.makedirs(lib)
     for f in ('cpk.py', 'cpk_pack.py'):
@@ -132,12 +143,14 @@ def main():
     shutil.copyfile(os.path.join(ROOT, 'patcher', 'README_KO.txt'), os.path.join(top, 'README_KO.txt'))
     # zip: 필수 1개 + 자막 영상 조각마다 1개(각자 payload_movies 일부 + manifest)
     core_members = ['패치하기.bat', 'README_KO.txt', 'python', 'licenses', 'patcher/patch.py', 'patcher/rules.txt', 'patcher/lib', 'patcher/payload']
-    zp = os.path.join(REL, name + '_Patcher.zip')
+    zp = os.path.join(REL, name + '.zip')
     print('%s %.1fMB' % (os.path.basename(zp), zip_dir(zp, top, core_members) / 1e6))
     # 자막 영상은 구글 드라이브로 배포(크기 제한 없음) → zip 하나(2026-10-01 사용자 결정)
-    zp = os.path.join(REL, '%s_Movies.zip' % name)
-    size = zip_dir(zp, top, ['patcher/payload_movies'])
-    print('%s %.2fGB' % (os.path.basename(zp), size / 1e9))
+    # 자막 영상 묶음이 바뀌었을 때만 --movies-zip 으로 새로 만든다(바뀌지 않았으면 예전 Movies zip 을 그대로 씀)
+    if '--movies-zip' in sys.argv:
+        zp = os.path.join(REL, '%s_Movies.zip' % name)
+        size = zip_dir(zp, top, ['patcher/payload_movies'])
+        print('%s %.2fGB' % (os.path.basename(zp), size / 1e9))
 
 
 if __name__ == '__main__':

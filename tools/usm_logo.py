@@ -9,11 +9,13 @@
 내용: 0~1.3초 반짝이 · 1.3~3.1초 로고 조립(글자 깜빡임) · 3.1초~ 완성 로고가 배율 0.91→1.00 으로 천천히 커짐.
       완성 구간의 로고는 Interface/title/title_logo.gtx(일본어 원본)를 옮겨 놓은 것뿐이다(ECC 아핀 정합 cc>0.995, 알파 차 1% 미만).
 방법: 프레임마다 원본 로고 그림을 영상 알파에 맞춰(ECC) 변환을 구하고, 맞는 프레임(완성 구간)은 한글 title_logo 를
-      같은 변환으로 그려 넣는다(색 = 흰 바탕 합성, 알파 = 한글 로고 알파). 조립 구간은 원본 그대로(사용자 선택).
+      같은 변환으로 그려 넣는다(색 = 흰 바탕 합성, 알파 = 한글 로고 알파). 글자 자리만 바꾸고 ♯·FE 는 원본 프레임 그대로.
+      조립 구간(f0030~f0094)은 GPT 가 만든 한글 프레임(work/GPT_타이틀영상/결과_프레임)을 쓴다(2026-10-13, 없으면 원본).
       두 영상을 원본과 같은 프레임 수·I프레임 위치로 다시 굽고, 헤더 숫자(filesize·avbps·minbuf·ixsize·키프레임 위치)를 고친다.
 """
 import os, sys, struct, subprocess, tempfile, json
 import numpy as np, cv2
+from PIL import Image
 import extract, gtx2, usm_frames, usm_burn as ub
 from cpk import read_utf
 
@@ -24,6 +26,7 @@ OUT_USM = os.path.join(ROOT, 'work', 'movie_ko', 'm00.usm')
 OUT_DIR = os.path.join(ROOT, 'work', 'movie_logo')
 KO_LOGO = os.path.join(ROOT, 'translation', 'graphics', '2D', 'Interface', 'title', 'title_logo.gtx')
 CC_OK = 0.995
+GPT_DIR = os.path.join(ROOT, 'work', 'GPT_타이틀영상', '결과_프레임')   # 조립 구간 한글 프레임(GPT, 2026-10-13)
 
 
 def decode(es):
@@ -139,13 +142,52 @@ def main():
     assert ks and ks[-1] == n - 1 and ks == list(range(ks[0], n)), '완성 구간이 끝까지 이어지지 않음'
     print('로고 교체 프레임 %d~%d (%d장, %.1f초부터) · 정합 cc 최저 %.4f' % (ks[0], n - 1, len(ks), ks[0] / FPS, min(fit[k][0] for k in ks)))
     kprem = ko[..., :3] * (ko[..., 3:] / 255)
+    # 글자 자리(로고 좌표): 일본어·한글 로고가 다른 곳을 넓힌 것. 이 밖(♯·FE·™)은 원본 프레임을 그대로 둔다
+    # (2026-10-13: 통째로 갈아 끼우면 아직 색이 차오르는 중인 원본 FE 가 95프레임에서 갑자기 순검정이 됐다)
+    zone_logo = np.any(ja != ko, axis=2) & ((ja[..., 3] > 8) | (ko[..., 3] > 8))
+    # 15px 넓힘(글자 속까지 통째로) — 1px 로 좁히면 글자 속에 원본 일본어 글자 모양이 옅게 비친다(10/13 확인)
+    zone_logo = cv2.dilate(zone_logo.astype(np.uint8), np.ones((15, 15), np.uint8)).astype(np.float32)
     col2 = col.copy(); alp2 = alp.copy()
     for k in ks:
         w = fit[k][1]
+        z = cv2.warpAffine(zone_logo, w, (W, H), flags=cv2.INTER_NEAREST) > 0.5
         a = cv2.warpAffine(ko[..., 3] / 255, w, (W, H), flags=cv2.INTER_LINEAR)
         p = cv2.warpAffine(kprem, w, (W, H), flags=cv2.INTER_LINEAR)
-        col2[k] = np.clip(np.round(p + 255 * (1 - a)[..., None]), 0, 255).astype(np.uint8)     # 흰 바탕 합성(원본과 같은 방식)
-        alp2[k] = np.clip(np.round(a * 255), 0, 255).astype(np.uint8)
+        c = np.clip(np.round(p + 255 * (1 - a)[..., None]), 0, 255).astype(np.uint8)          # 흰 바탕 합성(원본과 같은 방식)
+        col2[k][z] = c[z]
+        alp2[k][z] = np.clip(np.round(a * 255), 0, 255).astype(np.uint8)[z]
+    # 조립 구간: GPT 가 만든 프레임(work/GPT_타이틀영상/결과_프레임/fNNNN.png, 원래 색 RGBA). 원본과 다른 픽셀만 가져온다
+    gpt = [f for f in sorted(os.listdir(GPT_DIR)) if f.endswith('.png')] if os.path.isdir(GPT_DIR) else []
+    for f in gpt:
+        k = int(f[1:5]); assert k < ks[0], f
+        r = np.asarray(Image.open(os.path.join(GPT_DIR, f)).convert('RGBA'))        # cv2.imread 는 한글 경로를 못 읽는다
+        af = alp[k].astype(np.float32)[..., None] / 255
+        o = np.where(af > 0.004, (col[k].astype(np.float32) - 255 * (1 - af)) / np.maximum(af, 1e-3), 0)
+        o = np.dstack([np.clip(np.round(o), 0, 255).astype(np.uint8), alp[k]])
+        d = np.any(r != o, axis=2)
+        ra = r[..., 3:].astype(np.float32) / 255
+        c = np.clip(np.round(r[..., :3].astype(np.float32) * ra + 255 * (1 - ra)), 0, 255).astype(np.uint8)
+        col2[k][d] = c[d]; alp2[k][d] = r[..., 3][d]
+    print('GPT 조립 구간 프레임 %d장 반영%s' % (len(gpt), (' (f%04d~f%04d)' % (int(gpt[0][1:5]), int(gpt[-1][1:5]))) if gpt else ''))
+    # 이음새: 완성 로고(FE 윗변의 굵은 녹색 획 포함)를 원본 테두리가 차오르는 비율로 f0084~ 에 섞는다.
+    # 안 섞으면 f0095 에서 FE 위 녹색 획이 갑자기 굵어진다(10/13 사용자 지적). 원본은 f0087 에 테두리가 한꺼번에 생긴다.
+    if gpt:
+        def green(c, a):
+            c = c.astype(int)
+            return int(((a > 128) & (c[..., 1] > 150) & (c[..., 1] - c[..., 0] > 40) & (c[..., 0] < 200)).sum())
+        g_end = green(col[ks[0]], alp[ks[0]])
+        P = [np.polyfit(ks, [fit[k][1][r, c] for k in ks], 2) for r, c in ((0, 0), (0, 2), (1, 2))]
+        for k in range(84, ks[0]):
+            wgt = min(1.0, green(col[k], alp[k]) / g_end)
+            s, tx, ty = (np.polyval(p, k) for p in P)
+            w = np.array([[s, 0, tx], [0, s, ty]], np.float32)
+            z = cv2.warpAffine(zone_logo, w, (W, H), flags=cv2.INTER_NEAREST) > 0.5
+            a = cv2.warpAffine(ko[..., 3] / 255, w, (W, H), flags=cv2.INTER_LINEAR)
+            p = cv2.warpAffine(kprem, w, (W, H), flags=cv2.INTER_LINEAR)
+            cf = p + 255 * (1 - a)[..., None]
+            col2[k][z] = np.clip(np.round(col2[k][z] * (1 - wgt) + cf[z] * wgt), 0, 255).astype(np.uint8)
+            alp2[k][z] = np.clip(np.round(alp2[k][z] * (1 - wgt) + a[z] * 255 * wgt), 0, 255).astype(np.uint8)
+        print('이음새 f0084~f%04d: 완성 로고를 원본 테두리 비율로 섞음' % (ks[0] - 1))
     cs = ub.chunks(orig)
     keys = {s: [i for i, c in enumerate([c for c in cs if c['sig'] == s and c['typ'] == 0]) if ub.pict_type(c['payload']) == 'I'] for s in (b'@SFV', b'@ALP')}
     es_c = encode(col2, keys[b'@SFV'])
